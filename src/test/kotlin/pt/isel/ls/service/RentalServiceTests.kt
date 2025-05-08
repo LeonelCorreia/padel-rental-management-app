@@ -5,12 +5,10 @@ package pt.isel.ls.service
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import pt.isel.ls.domain.Email
-import pt.isel.ls.domain.Name
-import pt.isel.ls.domain.TimeSlot
-import pt.isel.ls.domain.toName
+import pt.isel.ls.domain.*
 import pt.isel.ls.repository.mem.TransactionManagerInMem
 import pt.isel.ls.services.*
+import pt.isel.ls.webapi.createRental
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -61,5 +59,14 @@ class RentalServiceTests {
         assertEquals(rentTime, rental.rentTime)
         assertEquals(renter, rental.renter)
         assertEquals(court, rental.court)
+    }
+
+    @Test
+    fun `count rentals Of user in certain court`() {
+        val user = userService.createUser("Name".toName(), "email@email.com".toEmail()).getOrNull()
+        val rental = createRental(user!!.token.toString())
+        val a = rentalService.getUsersOfRentalsOnCourt(rental.court.crid)
+        assert(a.isSuccess)
+        assertEquals(a.getOrThrow().size, 1)
     }
 }

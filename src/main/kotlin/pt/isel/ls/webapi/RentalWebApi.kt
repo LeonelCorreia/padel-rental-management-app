@@ -10,11 +10,9 @@ import org.http4k.core.Status.Companion.CREATED
 import org.http4k.core.Status.Companion.OK
 import org.http4k.routing.path
 import pt.isel.ls.domain.TimeSlot
+import pt.isel.ls.domain.User
 import pt.isel.ls.services.*
-import pt.isel.ls.webapi.dto.RentalCreationInput
-import pt.isel.ls.webapi.dto.RentalDetailsOutput
-import pt.isel.ls.webapi.dto.RentalUpdateInput
-import pt.isel.ls.webapi.dto.toRentalsOutput
+import pt.isel.ls.webapi.dto.*
 
 /**
  * This is the Rental Management Api, where you can see details about a rental or create one.
@@ -126,4 +124,17 @@ class RentalWebApi(
                     onSuccess = { Response(OK).body(Json.encodeToString(RentalDetailsOutput(it))) },
                 )
         }
+    fun getUsersOfRentalsOnCourt(request: Request): Response =
+        request.handler {
+            val courtId = request.path("crid")?.toUIntOrNull()
+
+            requireNotNull(courtId) { "Invalid court id" }
+
+
+            return rentalService.getUsersOfRentalsOnCourt(courtId).fold(
+                onFailure = { ex -> ex.toResponse() },
+                onSuccess = {Response(OK).body(Json.encodeToString(it))},
+            )
+        }
+
 }

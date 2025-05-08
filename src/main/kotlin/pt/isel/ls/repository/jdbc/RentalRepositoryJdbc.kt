@@ -337,6 +337,29 @@ class RentalRepositoryJdbc(
         )
     }
 
+    override fun getNumOfRentalsOfUsersOnCourt(crid: UInt): Map<User, UInt> {
+        val sql = """
+            SELECT u.uid as user_id, u.name as user_name, u.email as user_email,
+                COUNT(r.rid) as rentals_count
+            FROM rentals r
+            JOIN users u ON r.renter_id = u.uid
+            WHERE r.court_id = ?
+            GROUP BY u.uid, u.name, u.email, u.token
+        """.trimIndent()
+        return connection.prepareStatement(sql).use { stmt ->
+            stmt.setInt(1, crid.toInt())
+            stmt.executeQuery().use { rs ->
+                val rentalsCount = mutableMapOf<User, UInt>()
+                while (rs.next()) {
+                    val user = rs.mapUser()
+                    val count = rs.getInt("rentals_count").toUInt()
+                    rentalsCount[user] = count
+                }
+                rentalsCount
+            }
+        }
+    }
+
     /**
      * Function that creates a new rental or updates, with the information given, if one with the rid already exists.
      * @param element rental to be created or updated

@@ -160,4 +160,5 @@ class ClubWebApiTests {
             )
         assertEquals(Status.BAD_REQUEST, getAvailableHoursRequest.status)
     }
+    
 }

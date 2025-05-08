@@ -3,6 +3,7 @@ package pt.isel.ls.repository
 import kotlinx.datetime.LocalDate
 import pt.isel.ls.domain.Rental
 import pt.isel.ls.domain.TimeSlot
+import pt.isel.ls.domain.User
 
 /**
  * Generic Interface for a Rental repository that supports CRUD operations.
@@ -73,4 +74,8 @@ interface RentalRepository : Repository<Rental> {
         date: LocalDate,
         rentTime: TimeSlot,
     ): Rental
+
+    fun getNumOfRentalsOfUsersOnCourt(
+        crid: UInt,
+    ): Map<User, UInt>
 }

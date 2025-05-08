@@ -8,6 +8,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import pt.isel.ls.domain.Rental
 import pt.isel.ls.domain.TimeSlot
+import pt.isel.ls.domain.User
 import pt.isel.ls.repository.RentalRepository
 import pt.isel.ls.repository.mem.CourtRepositoryInMem.courts
 import pt.isel.ls.repository.mem.UserRepositoryInMem.users
@@ -176,6 +177,10 @@ object RentalRepositoryInMem : RentalRepository {
             )
         rentals.add(newRental)
         return newRental
+    }
+
+    override fun getNumOfRentalsOfUsersOnCourt(crid: UInt): Map<User, UInt> {
+        TODO("Not yet implemented")
     }
 
     /**

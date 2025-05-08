@@ -3,6 +3,7 @@ package pt.isel.ls.services
 import kotlinx.datetime.LocalDate
 import pt.isel.ls.domain.Rental
 import pt.isel.ls.domain.TimeSlot
+import pt.isel.ls.domain.User
 import pt.isel.ls.repository.TransactionManager
 import pt.isel.ls.webapi.dto.PaginationInfo
 
@@ -132,6 +133,15 @@ class RentalService(
                     date,
                     rentTime,
                 )
+            }
+        }
+
+    fun getUsersOfRentalsOnCourt(
+        crid: UInt,
+    ): Result<Map<User, UInt>> =
+        runCatching {
+            trxManager.run {
+                rentalRepo.getNumOfRentalsOfUsersOnCourt(crid)
             }
         }
 }

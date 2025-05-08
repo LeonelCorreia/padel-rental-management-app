@@ -66,6 +66,7 @@ fun main() {
             "/clubs/{cid}" bind GET to courtApi::getCourtsByClub,
             "/{crid}" bind GET to courtApi::getCourtInfo,
             "/{crid}/available" bind POST to clubApi::getAvailableHours,
+            "/{crid}/rentals/users" bind GET to rentalApi::getUsersOfRentalsOnCourt,
         )
     val rentalsRoutes =
         routes(

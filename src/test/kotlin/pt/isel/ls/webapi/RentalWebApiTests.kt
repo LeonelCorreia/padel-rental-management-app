@@ -33,6 +33,7 @@ val rentalsRoutes =
         "users/{uid}/rentals" bind GET to rentalApi::getUserRentals,
         "rentals/{rid}" bind DELETE to rentalApi::deleteRental,
         "rentals/{rid}" bind PUT to rentalApi::updateRental,
+        "courts/{crid}/rentals/users" bind GET to rentalApi::getUsersOfRentalsOnCourt,
     )
 
 fun createRental(token: String): RentalDetailsOutput {
@@ -223,5 +224,10 @@ class RentalWebApiTests {
                     .header("Authorization", token),
             )
         assertEquals(Status.NOT_FOUND, getRentalInfoRequest.status)
+    }
+
+    @Test
+    fun `create rentals on courts with diferent users and see if the count its being done correct`(){
+
     }
 }
