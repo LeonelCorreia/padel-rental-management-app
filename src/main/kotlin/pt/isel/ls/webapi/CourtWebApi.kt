@@ -54,6 +54,24 @@ class CourtWebApi(
                 )
         }
 
+    fun getCourtsUserRentals(request: Request): Response =
+        request.handler {
+            val limit = request.query("limit")?.toIntOrNull() ?: LIMIT_VALUE_DEFAULT
+            val skip = request.query("skip")?.toIntOrNull() ?: SKIP_VALUE_DEFAULT
+
+            val userId = request.path("uid")?.toUIntOrNull()
+            requireNotNull(userId) { "Invalid user id" }
+
+            val pageInfo = courtService.numberOfUserCourtsThatHaveRentalsOfUser(userId).getOrThrow()
+
+            courtService
+                .getCourtsUserRentals(userId, limit, skip)
+                .fold(
+                    onFailure = { ex -> ex.toResponse() },
+                    onSuccess = { Response(OK).body(Json.encodeToString(it.toCourtsOutput(pageInfo))) },
+                )
+        }
+
     fun getCourtInfo(request: Request): Response =
         request.handler {
             val courtId = request.path("crid")?.toUIntOrNull()

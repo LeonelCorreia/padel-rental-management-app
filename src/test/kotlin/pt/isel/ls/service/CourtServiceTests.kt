@@ -2,21 +2,27 @@
 
 package pt.isel.ls.service
 
+import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import pt.isel.ls.domain.*
 import pt.isel.ls.repository.mem.TransactionManagerInMem
 import pt.isel.ls.services.ClubService
 import pt.isel.ls.services.CourtService
+import pt.isel.ls.services.RentalService
 import pt.isel.ls.services.UserService
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.days
 
 class CourtServiceTests {
     private val transactionManager = TransactionManagerInMem()
     private val courtService = CourtService(transactionManager)
     private val clubService = ClubService(transactionManager)
     private val userService = UserService(transactionManager)
+    private val rentalService = RentalService(transactionManager)
 
     @BeforeTest
     fun setUp() {
@@ -42,6 +48,38 @@ class CourtServiceTests {
         assertEquals("Court A".toName(), court.name)
         assertEquals(club, court.club)
     }
+
+    @Test
+    fun `check if user has 2 rentals in 2 different courts` (){
+        val ownerResult = userService.createUser("owner1".toName(), "owner1@email.com".toEmail())
+        assertTrue(ownerResult.isSuccess)
+        val clubResult = clubService.createClub("Sports Club".toName(), ownerResult.getOrNull()!!)
+        assertTrue(clubResult.isSuccess)
+        val club = clubResult.getOrNull()!!
+        val court1Result = courtService.createCourt("Court Z".toName(), club.cid)
+        val court2Result = courtService.createCourt("Court W".toName(), club.cid)
+
+        val rentalDate =
+            Clock.System
+                .now()
+                .plus(1.days)
+                .toLocalDateTime(TimeZone.currentSystemDefault())
+                .date
+        val rent1Time = TimeSlot(10u, 13u)
+
+        val rental1Result = rentalService.createRental(rentalDate, rent1Time, ownerResult.getOrNull()!!.uid, court1Result.getOrNull()!!.crid)
+        assertTrue(rental1Result.isSuccess)
+
+        val rent2Time = TimeSlot(14u, 16u)
+
+        val rental2Result = rentalService.createRental(rentalDate, rent2Time, ownerResult.getOrNull()!!.uid, court2Result.getOrNull()!!.crid)
+        assertTrue(rental2Result.isSuccess)
+
+        val numberOfCourtsThatHaveRentalsByUser = courtService.numberOfUserCourtsThatHaveRentalsOfUser(ownerResult.getOrNull()!!.uid)
+        assertTrue(numberOfCourtsThatHaveRentalsByUser.isSuccess)
+        assertEquals(2, numberOfCourtsThatHaveRentalsByUser.getOrNull()!!.totalElements)
+    }
+
 
     @Test
     fun `find courts by club identifier`() {

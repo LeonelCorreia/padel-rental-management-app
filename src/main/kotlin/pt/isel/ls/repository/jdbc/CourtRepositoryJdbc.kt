@@ -6,6 +6,7 @@ import pt.isel.ls.domain.*
 import pt.isel.ls.repository.CourtRepository
 import pt.isel.ls.services.CourtError
 import pt.isel.ls.services.ensureOrThrow
+import java.rmi.server.UID
 import java.sql.Connection
 import java.sql.ResultSet
 
@@ -179,6 +180,39 @@ class CourtRepositoryJdbc(
         }
     }
 
+    override fun findAllCourtsThatHaveRentalsByRenterId(
+        renter: UInt,
+        limit: Int,
+        offset: Int,
+    ): List<Court> {
+        val sqlSelect =
+            """
+            ${courtSqlReturnFormat()}
+            WHERE cr.crid IN (
+                SELECT DISTINCT cr.crid
+                FROM rentals r
+                JOIN courts cr ON r.crid = cr.crid
+                WHERE r.renter_id = ?
+            )
+            ORDER BY cr.crid DESC
+            LIMIT ? OFFSET ?
+            """.trimIndent()
+
+        return connection.prepareStatement(sqlSelect).use { stmt ->
+            stmt.setInt(1, renter.toInt())
+            stmt.setInt(2, limit)
+            stmt.setInt(3, offset)
+
+            stmt.executeQuery().use { rs ->
+                val courts = mutableListOf<Court>()
+                while (rs.next()) {
+                    courts.add(rs.mapCourt())
+                }
+                courts
+            }
+        }
+    }
+
     /**
      * Function that deletes a court if exists a tuple with the crid, if it doesn't exist, does nothing
      * @param id Identifier of the Court to delete
@@ -207,6 +241,21 @@ class CourtRepositoryJdbc(
         val sqlCount = "SELECT COUNT(*) FROM courts where club_id = ?"
         return connection.prepareStatement(sqlCount).use { stmt ->
             stmt.setInt(1, cid.toInt())
+            stmt.executeQuery().use { rs ->
+                if (rs.next()) rs.getInt(1) else 0
+            }
+        }
+    }
+
+    override fun countByUser(uid: UInt): Int{
+        val sqlCount = """
+            SELECT COUNT(*)
+            FROM courts cr
+            JOIN rentals r ON cr.crid = r.court_id
+            WHERE r.renter_id = ?
+            """.trimIndent()
+        return connection.prepareStatement(sqlCount).use { stmt ->
+            stmt.setInt(1, uid.toInt())
             stmt.executeQuery().use { rs ->
                 if (rs.next()) rs.getInt(1) else 0
             }

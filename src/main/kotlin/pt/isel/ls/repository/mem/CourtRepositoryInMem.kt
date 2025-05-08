@@ -4,7 +4,10 @@ import pt.isel.ls.domain.Court
 import pt.isel.ls.domain.Name
 import pt.isel.ls.repository.CourtRepository
 import pt.isel.ls.repository.mem.ClubRepositoryInMem.clubs
+import pt.isel.ls.repository.mem.RentalRepositoryInMem.rentals
+import pt.isel.ls.repository.mem.UserRepositoryInMem.users
 import pt.isel.ls.services.CourtError
+import pt.isel.ls.services.RentalError
 import pt.isel.ls.services.getOrThrow
 
 object CourtRepositoryInMem : CourtRepository {
@@ -39,6 +42,23 @@ object CourtRepositoryInMem : CourtRepository {
         limit: Int,
         offset: Int,
     ): List<Court> = courts.filter { it.club.cid == cid }.drop(offset).take(limit)
+
+    override fun findAllCourtsThatHaveRentalsByRenterId(
+        renter: UInt,
+        limit: Int,
+        offset: Int
+    ): List<Court> {
+        getOrThrow(RentalError.RenterNotFound(renter)) {
+            users.firstOrNull { it.uid == renter }
+        }
+
+        return rentals
+            .filter { it.renter.uid == renter }
+            .map { it.court }
+            .drop(offset)
+            .take(limit)
+    }
+
 
     override fun save(element: Court) {
         courts.removeIf { it.crid == element.crid }

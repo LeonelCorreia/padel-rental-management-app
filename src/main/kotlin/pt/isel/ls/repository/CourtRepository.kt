@@ -29,10 +29,18 @@ interface CourtRepository : Repository<Court> {
         offset: Int = 0,
     ): List<Court>
 
+    fun findAllCourtsThatHaveRentalsByRenterId(
+        renter: UInt,
+        limit: Int = 30,
+        offset: Int = 0,
+    ): List<Court>
+
     /**
      * Function that returns the number of courts in the system.
      * @param cid the club identifier
      * @return the number of courts in the system
      */
     fun count(cid: UInt): Int
+
+    fun countByUser(uid: UInt): Int
 }

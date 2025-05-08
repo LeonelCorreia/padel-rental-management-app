@@ -33,6 +33,13 @@ class CourtService(
             }
         }
 
+    fun numberOfUserCourtsThatHaveRentalsOfUser(uid: UInt): Result<PaginationInfo> =
+        runCatching {
+            trxManager.run {
+                PaginationInfo(courtRepo.countByUser(uid))
+            }
+    }
+
     /**
      * Function that returns a court by its identifier
      * @param crid the court identifier
@@ -59,6 +66,17 @@ class CourtService(
         runCatching {
             trxManager.run {
                 courtRepo.createCourt(name, clubId)
+            }
+        }
+
+    fun getCourtsUserRentals(
+        uid: UInt,
+        limit: Int,
+        skip: Int,
+    ): Result<List<Court>> =
+        runCatching {
+            trxManager.run {
+                courtRepo.findAllCourtsThatHaveRentalsByRenterId(uid, limit, skip)
             }
         }
 }

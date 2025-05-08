@@ -1,5 +1,6 @@
 package pt.isel.ls.webapi
 
+import kotlinx.datetime.LocalDate
 import kotlinx.serialization.json.Json
 import org.http4k.core.Method.GET
 import org.http4k.core.Method.POST
@@ -13,6 +14,7 @@ import pt.isel.ls.services.UserService
 import pt.isel.ls.webapi.dto.CourtDetailsOutput
 import pt.isel.ls.webapi.dto.CourtOutput
 import pt.isel.ls.webapi.dto.CourtsOutput
+import pt.isel.ls.webapi.dto.RentalCreationInput
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -30,6 +32,7 @@ val courtsRoutes =
         "courts" bind POST to courtApi::createCourt,
         "courts/clubs/{cid}" bind GET to courtApi::getCourtsByClub,
         "courts/{crid}" bind GET to courtApi::getCourtInfo,
+        "courts/users/{uid}" bind GET to courtApi::getCourtsUserRentals
     )
 
 fun createCourt(
@@ -55,6 +58,65 @@ class CourtWebApiTests {
             it.courtRepo.clear()
             it.userRepo.clear()
         }
+    }
+
+    @Test
+    fun `create 2 courts each one with a rental made by the same user`() {
+        val token = createUser() // user criado supondo que é o primeiro
+        val clubID = createClub(token).cid.toInt()
+
+        val court1Response = createCourt(token, clubID)
+        val court2response = createCourt(token, clubID)
+
+        val rental1 =
+            rentalsRoutes(
+                Request(POST, "rentals")
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", token)
+                    .body(
+                        Json
+                            .encodeToString(
+                                RentalCreationInput(
+                                    clubID,
+                                    court1Response.crid.toInt(),
+                                    LocalDate.parse("2025-05-08"),
+                                    17,
+                                    18,
+                                ),
+                            ),
+                    ),
+            )
+        assertEquals(Status.CREATED, rental1.status)
+
+        val rental2 =
+            rentalsRoutes(
+                Request(POST, "rentals")
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", token)
+                    .body(
+                        Json
+                            .encodeToString(
+                                RentalCreationInput(
+                                    clubID,
+                                    court2response.crid.toInt(),
+                                    LocalDate.parse("2025-05-08"),
+                                    20,
+                                    21,
+                                ),
+                            ),
+                    ),
+            )
+
+        assertEquals(Status.CREATED, rental2.status)
+
+        val userId = 1
+        val listOfCourtsThatHaveRentalByUser =
+            courtsRoutes(
+                Request(GET, "courts/users/$userId")
+            )
+        assertEquals(Status.OK, listOfCourtsThatHaveRentalByUser.status)
+        val courts = Json.decodeFromString<CourtsOutput>(listOfCourtsThatHaveRentalByUser.bodyString())
+        assertEquals(courts.courts.size, 2)
     }
 
     @Test

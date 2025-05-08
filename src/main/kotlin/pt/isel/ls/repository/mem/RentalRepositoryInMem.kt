@@ -16,7 +16,7 @@ import pt.isel.ls.services.ensureOrThrow
 import pt.isel.ls.services.getOrThrow
 
 object RentalRepositoryInMem : RentalRepository {
-    private val rentals = mutableListOf<Rental>()
+    val rentals = mutableListOf<Rental>()
 
     private var currId = 0u
 
