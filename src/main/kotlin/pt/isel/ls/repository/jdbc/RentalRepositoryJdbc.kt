@@ -337,6 +337,70 @@ class RentalRepositoryJdbc(
         )
     }
 
+    override fun numberOfUsersWithRentalsOnDate(date: LocalDate): Int {
+        val sql = """
+            SELECT COUNT(*)
+            FROM (
+                SELECT rid
+                        FROM rentals
+                        WHERE date_ = ?
+                GROUP BY rid
+            )
+        """.trimIndent()
+        return connection.prepareStatement(sql).use { stmt ->
+            stmt.setInt(1, date.toEpochDays())
+            stmt.executeQuery().use { rs ->
+                if (rs.next()) rs.getInt(1) else 0
+            }
+        }
+    }
+
+    override fun getUsersThatRentedOnDate(
+        date: LocalDate,
+        limit: Int,
+        offset: Int,
+    ): Map<User, Int> {
+        val sqlSelectUsers =
+            """
+            ${rentalSqlReturnFormat()}
+            WHERE r.rental_date = ?
+            ORDER BY r.date_ ASC, r.rd_start ASC
+            LIMIT ? OFFSET ?
+            """.trimIndent()
+
+        val users = connection.prepareStatement(sqlSelectUsers).use { stmt ->
+            stmt.setInt(1, date.toEpochDays())
+            stmt.setInt(2, limit)
+            stmt.setInt(3, offset)
+
+            stmt.executeQuery().use { rs ->
+                val users = mutableListOf<User>()
+                while (rs.next()) {
+                    val user = rs.mapRental().renter
+                    if(!users.contains(user)) users.add(user)
+                }
+                users
+            }
+        }
+
+        val finalMap = mutableMapOf<User, Int>()
+
+        users.forEach { user ->
+            val sqlSelectTimes = "SELECT COUNT(*) FROM rentals WHERE renter_id = ? AND date_ = ?"
+            connection.prepareStatement(sqlSelectTimes).use { stmt ->
+                stmt.setInt(1, user.uid.toInt())
+                stmt.setInt(2, date.toEpochDays())
+
+                stmt.executeQuery().use { rs ->
+                    // should always have next as we already know the user made a rental, but for safety
+                    finalMap[user] = if (rs.next()) rs.getInt(1) else 0
+                }
+            }
+        }
+
+        return finalMap
+    }
+
     /**
      * Function that creates a new rental or updates, with the information given, if one with the rid already exists.
      * @param element rental to be created or updated

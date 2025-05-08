@@ -8,6 +8,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import pt.isel.ls.domain.Rental
 import pt.isel.ls.domain.TimeSlot
+import pt.isel.ls.domain.User
 import pt.isel.ls.repository.RentalRepository
 import pt.isel.ls.repository.mem.CourtRepositoryInMem.courts
 import pt.isel.ls.repository.mem.UserRepositoryInMem.users
@@ -177,6 +178,20 @@ object RentalRepositoryInMem : RentalRepository {
         rentals.add(newRental)
         return newRental
     }
+
+    override fun numberOfUsersWithRentalsOnDate(date: LocalDate): Int = rentals.filter { rental ->
+            rental.date == date
+        }.distinctBy { it.renter }.size
+
+
+    override fun getUsersThatRentedOnDate(
+        date: LocalDate,
+        limit: Int,
+        offset: Int
+    ): Map<User, Int> = rentals
+            .filter {
+                it.date == date
+            }.associateBy { rental -> rental.renter to rentals.filter { it.date == date  && it.renter == rental.renter }.size }
 
     /**
      * Updates an existing rental or creates a new one if it's new.

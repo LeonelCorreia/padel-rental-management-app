@@ -14,7 +14,9 @@ import pt.isel.ls.services.*
 import pt.isel.ls.webapi.dto.RentalCreationInput
 import pt.isel.ls.webapi.dto.RentalDetailsOutput
 import pt.isel.ls.webapi.dto.RentalUpdateInput
+import pt.isel.ls.webapi.dto.UsersRentalTimesOnDateOutput
 import pt.isel.ls.webapi.dto.toRentalsOutput
+import pt.isel.ls.webapi.dto.toUsersRentalTimes
 
 /**
  * This is the Rental Management Api, where you can see details about a rental or create one.
@@ -124,6 +126,27 @@ class RentalWebApi(
                 ).fold(
                     onFailure = { ex -> ex.toResponse() },
                     onSuccess = { Response(OK).body(Json.encodeToString(RentalDetailsOutput(it))) },
+                )
+        }
+
+    fun getUsersThatRentedOnDate(request: Request): Response =
+        request.handler {
+            val date = (request.path("date"))?.let { LocalDate.parse(it) }
+            requireNotNull(date)
+
+            val limit = request.query("limit")?.toIntOrNull() ?: LIMIT_VALUE_DEFAULT
+            val skip = request.query("skip")?.toIntOrNull() ?: SKIP_VALUE_DEFAULT
+
+            val pageInfo = rentalService.numberOfUsersWithRentalsOnDate(date).getOrThrow()
+
+            rentalService
+                .getUsersThatRentedOnDate(
+                    date,
+                    limit,
+                    skip,
+                ).fold(
+                    onFailure = { ex -> ex.toResponse() },
+                    onSuccess = { Response(OK).body(Json.encodeToString(it.toUsersRentalTimes(pageInfo))) }
                 )
         }
 }

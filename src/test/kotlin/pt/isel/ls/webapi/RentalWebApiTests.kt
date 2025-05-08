@@ -12,6 +12,7 @@ import org.http4k.core.Request
 import org.http4k.core.Status
 import org.http4k.routing.bind
 import org.http4k.routing.routes
+import pt.isel.ls.domain.TimeSlot
 import pt.isel.ls.repository.mem.TransactionManagerInMem
 import pt.isel.ls.services.RentalService
 import pt.isel.ls.services.UserService
@@ -33,6 +34,7 @@ val rentalsRoutes =
         "users/{uid}/rentals" bind GET to rentalApi::getUserRentals,
         "rentals/{rid}" bind DELETE to rentalApi::deleteRental,
         "rentals/{rid}" bind PUT to rentalApi::updateRental,
+        "rentals/{date}" bind GET to rentalApi::getUsersThatRentedOnDate,
     )
 
 fun createRental(token: String): RentalDetailsOutput {
@@ -73,6 +75,50 @@ fun createRental(token: String): RentalDetailsOutput {
                                 LocalDate.parse("2025-06-$day"),
                                 10,
                                 12,
+                            ),
+                        ),
+                ),
+        )
+    assertEquals(Status.CREATED, rental.status)
+    return Json.decodeFromString<RentalDetailsOutput>(rental.bodyString())
+}
+
+fun createRentalOnDate(token: String, date: LocalDate, time: TimeSlot): RentalDetailsOutput {
+    val clubName = "Club-${randomString(10)}"
+    val clubResponse =
+        clubsRoutes(
+            Request(POST, "clubs")
+                .header("Content-Type", "application/json")
+                .header("Authorization", token)
+                .body(Json.encodeToString<ClubCreationInput>(ClubCreationInput(clubName))),
+        )
+    assertEquals(Status.CREATED, clubResponse.status)
+    val club = Json.decodeFromString<ClubDetailsOutput>(clubResponse.bodyString())
+    val name = "Court-${randomString(10)}"
+    val courtResponse =
+        courtsRoutes(
+            Request(POST, "courts")
+                .header("Content-Type", "application/json")
+                .header("Authorization", token)
+                .body("""{"cid":${club.cid.toInt()},"name":"$name"}"""),
+        )
+    assertEquals(Status.CREATED, courtResponse.status)
+    val court = Json.decodeFromString<CourtDetailsOutput>(courtResponse.bodyString())
+
+    val rental =
+        rentalsRoutes(
+            Request(POST, "rentals")
+                .header("Content-Type", "application/json")
+                .header("Authorization", token)
+                .body(
+                    Json
+                        .encodeToString(
+                            RentalCreationInput(
+                                club.cid.toInt(),
+                                court.crid.toInt(),
+                                date,
+                                time.start.toInt(),
+                                time.end.toInt(),
                             ),
                         ),
                 ),
@@ -223,5 +269,31 @@ class RentalWebApiTests {
                     .header("Authorization", token),
             )
         assertEquals(Status.NOT_FOUND, getRentalInfoRequest.status)
+    }
+
+    @Test
+    fun `get users that rented on date`() {
+        // create user randomizes email so diff users will be created
+        val token1 = createUser()
+        val token2 = createUser()
+
+        val dateToCheck = LocalDate.parse("2026-06-15")
+
+        val rentalByToken1OnDate1 = createRentalOnDate(token1, dateToCheck, TimeSlot(8u, 9u))
+        val rentalByToken1OnDate2 = createRentalOnDate(token1, dateToCheck, TimeSlot(10u, 12u))
+        val rentalByToken1OnDiffDate = createRentalOnDate(token1, LocalDate.parse("2027-09-14"), TimeSlot(10u, 12u))
+
+        val rentalByToken2OnDate = createRentalOnDate(token2, dateToCheck, TimeSlot(15u, 17u))
+
+        val usersThatRentedOnDate =
+            rentalsRoutes(
+                Request(GET, "rentals/2026-06-15")
+            )
+        assertEquals(Status.OK, usersThatRentedOnDate.status)
+
+        val usersThatRented = Json.decodeFromString<UsersRentalTimesOnDateOutput>(usersThatRentedOnDate.bodyString())
+
+        assertEquals(usersThatRented.usersRentalTimes.size, 2)
+        assertTrue(usersThatRented.usersRentalTimes.first().times in 1..2 )
     }
 }
