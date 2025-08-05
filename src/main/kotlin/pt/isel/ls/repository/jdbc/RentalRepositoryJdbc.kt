@@ -322,7 +322,8 @@ class RentalRepositoryJdbc(
 
         val sqlSelectRenter =
             """
-            SELECT * FROM users WHERE uid = ?
+            ${userSqlReturnFormat()} 
+            WHERE uid = ?
             """.trimIndent()
 
         val renter =
